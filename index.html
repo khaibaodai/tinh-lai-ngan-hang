@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tính Toán Lãi Vay Mua Nhà</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f4f4f4;
+      margin: 0;
+      padding: 0;
+    }
+
+    .container {
+      max-width: 1000px;
+      margin: 20px auto;
+      padding: 20px;
+      background-color: #fff;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    }
+
+    .banner {
+      background-color: #007bff;
+      color: #fff;
+      padding: 20px;
+      text-align: center;
+      border-radius: 5px;
+      margin-bottom: 20px;
+    }
+
+    .banner h1 {
+      margin: 0;
+      font-size: 2.5em;
+    }
+
+    .banner p {
+      margin: 5px 0 0;
+      font-size: 1.2em;
+    }
+
+    .form-container, .result-container, .detail-container {
+      margin-bottom: 30px;
+    }
+
+    h2 {
+      color: #333;
+      border-bottom: 2px solid #007bff;
+      padding-bottom: 10px;
+    }
+
+    form label {
+      display: block;
+      margin: 10px 0 5px;
+      font-weight: bold;
+    }
+
+    form input, form select, form button {
+      width: 100%;
+      padding: 10px;
+      margin-bottom: 15px;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+      font-size: 1em;
+    }
+
+    form button {
+      background-color: #007bff;
+      color: #fff;
+      border: none;
+      cursor: pointer;
+    }
+
+    form button:hover {
+      background-color: #0056b3;
+    }
+
+    #summary-result {
+      background-color: #f9f9f9;
+      padding: 15px;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+      margin-bottom: 20px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+    }
+
+    table th, table td {
+      padding: 10px;
+      text-align: center;
+      border: 1px solid #ddd;
+    }
+
+    table th {
+      background-color: #007bff;
+      color: #fff;
+    }
+
+    table tr:nth-child(even) {
+      background-color: #f9f9f9;
+    }
+
+    .chart-container {
+      margin: 30px 0;
+    }
+
+    #loan-chart {
+      max-width: 800px;
+      margin: 0 auto;
+    }
+
+    .pdf-button {
+      background-color: #28a745;
+      color: #fff;
+      padding: 10px 20px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      margin-top: 15px;
+    }
+
+    .pdf-button:hover {
+      background-color: #218838;
+    }
+
+    footer {
+      text-align: center;
+      padding: 20px;
+      background-color: #007bff;
+      color: #fff;
+      margin-top: 30px;
+      border-radius: 5px;
+    }
+
+    footer p {
+      margin: 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- Banner -->
+    <div class="banner">
+      <h1>Tính Toán Lãi Vay Mua Nhà</h1>
+      <p>Công cụ tính toán lãi vay ngân hàng chính xác và dễ dàng</p>
+    </div>
+
+    <!-- Form nhập thông tin -->
+    <div class="form-container">
+      <h2>Nhập Thông Tin Khoản Vay</h2>
+      <form id="loan-form">
+        <label for="loan-amount">Số tiền vay (VNĐ):</label>
+        <input type="number" id="loan-amount" placeholder="Nhập số tiền vay" required>
+
+        <label for="interest-rate">Lãi suất (%/năm):</label>
+        <input type="number" id="interest-rate" placeholder="Nhập lãi suất" step="0.01" required>
+
+        <label for="loan-term">Kỳ hạn vay (tháng):</label>
+        <input type="number" id="loan-term" placeholder="Nhập kỳ hạn vay" required>
+
+        <label for="start-date">Ngày bắt đầu vay:</label>
+        <input type="date" id="start-date" required>
+
+        <label for="repayment-method">Cách thức trả lãi:</label>
+        <select id="repayment-method" required>
+          <option value="reducing">Trả theo dư nợ giảm dần</option>
+          <option value="flat">Trả theo dư nợ ban đầu</option>
+        </select>
+
+        <button type="submit">Tính Toán</button>
+      </form>
+    </div>
+
+    <!-- Kết quả tổng hợp -->
+    <div class="result-container">
+      <h2>Kết Quả Tính Toán</h2>
+      <div id="summary-result"></div>
+      <button onclick="exportPDF()" class="pdf-button">Xuất Kết Quả Ra PDF</button>
+    </div>
+
+    <!-- Biểu đồ -->
+    <div class="chart-container">
+      <h2>Biểu Đồ Phân Bổ Gốc và Lãi</h2>
+      <canvas id="loan-chart"></canvas>
+    </div>
+
+    <!-- Bảng chi tiết -->
+    <div class="detail-container">
+      <h2>Chi Tiết Từng Kỳ Thanh Toán</h2>
+      <table id="detail-table">
+        <thead>
+          <tr>
+            <th>Kỳ</th>
+            <th>Ngày Thanh Toán</th>
+            <th>Gốc (VNĐ)</th>
+            <th>Lãi (VNĐ)</th>
+            <th>Tổng (VNĐ)</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+
+    <!-- Footer -->
+    <footer>
+      <p>Cr: Vũ Trọng Khải - 093 8811 050</p>
+    </footer>
+  </div>
+
+  <script>
+    let myChart = null;
+
+    document.getElementById("loan-form").addEventListener("submit", function (e) {
+      e.preventDefault();
+      calculateLoan();
+    });
+
+    function calculateLoan() {
+      const loanAmount = parseFloat(document.getElementById("loan-amount").value);
+      const interestRate = parseFloat(document.getElementById("interest-rate").value) / 100;
+      const loanTerm = parseInt(document.getElementById("loan-term").value);
+      const startDate = new Date(document.getElementById("start-date").value);
+      const repaymentMethod = document.getElementById("repayment-method").value;
+
+      let totalInterest = 0;
+      let totalPayment = 0;
+      let details = [];
+
+      if (repaymentMethod === "reducing") {
+        let remainingAmount = loanAmount;
+        const monthlyInterestRate = interestRate / 12;
+        const monthlyPayment = (loanAmount * monthlyInterestRate) / (1 - Math.pow(1 + monthlyInterestRate, -loanTerm));
+
+        for (let i = 1; i <= loanTerm; i++) {
+          const interest = remainingAmount * monthlyInterestRate;
+          const principal = monthlyPayment - interest;
+          remainingAmount -= principal;
+
+          totalInterest += interest;
+          totalPayment += monthlyPayment;
+
+          details.push({
+            period: i,
+            date: new Date(startDate.setMonth(startDate.getMonth() + 1)),
+            principal: principal,
+            interest: interest,
+            total: monthlyPayment,
+          });
+        }
+      } else {
+        const monthlyInterest = (loanAmount * interestRate) / 12;
+        const monthlyPrincipal = loanAmount / loanTerm;
+
+        for (let i = 1; i <= loanTerm; i++) {
+          totalInterest += monthlyInterest;
+          totalPayment += monthlyPrincipal + monthlyInterest;
+
+          details.push({
+            period: i,
+            date: new Date(startDate.setMonth(startDate.getMonth() + 1)),
+            principal: monthlyPrincipal,
+            interest: monthlyInterest,
+            total: monthlyPrincipal + monthlyInterest,
+          });
+        }
+      }
+
+      // Vẽ biểu đồ
+      const labels = details.map((_, index) => `Kỳ ${index + 1}`);
+      const principalData = details.map(d => d.principal);
+      const interestData = details.map(d => d.interest);
+      renderChart(labels, principalData, interestData);
+
+      // Hiển thị kết quả
+      displaySummary(loanAmount, totalInterest, totalPayment);
+      displayDetails(details);
+    }
+
+    function renderChart(labels, principalData, interestData) {
+      const ctx = document.getElementById('loan-chart').getContext('2d');
+      if (myChart) myChart.destroy();
+      
+      myChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: labels,
+          datasets: [
+            {
+              label: 'Gốc (VNĐ)',
+              data: principalData,
+              backgroundColor: '#007bff',
+            },
+            {
+              label: 'Lãi (VNĐ)',
+              data: interestData,
+              backgroundColor: '#28a745',
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          scales: {
+            x: { title: { display: true, text: 'Kỳ Thanh Toán' } },
+            y: { title: { display: true, text: 'Số Tiền (VNĐ)' }, beginAtZero: true }
+          }
+        }
+      });
+    }
+
+    function displaySummary(loanAmount, totalInterest, totalPayment) {
+      document.getElementById("summary-result").innerHTML = `
+        <p><strong>Số tiền vay:</strong> ${loanAmount.toLocaleString()} VNĐ</p>
+        <p><strong>Số tiền lãi phải trả:</strong> ${totalInterest.toLocaleString()} VNĐ</p>
+        <p><strong>Tổng số gốc và lãi phải trả:</strong> ${totalPayment.toLocaleString()} VNĐ</p>
+      `;
+    }
+
+    function displayDetails(details) {
+      const tbody = document.querySelector("#detail-table tbody");
+      tbody.innerHTML = "";
+      details.forEach(d => {
+        tbody.innerHTML += `
+          <tr>
+            <td>${d.period}</td>
+            <td>${d.date.toLocaleDateString()}</td>
+            <td>${d.principal.toLocaleString()}</td>
+            <td>${d.interest.toLocaleString()}</td>
+            <td>${d.total.toLocaleString()}</td>
+          </tr>
+        `;
+      });
+    }
+
+    function exportPDF() {
+      const doc = new jspdf.jsPDF();
+      doc.setFontSize(18);
+      doc.text("Kết Quả Tính Toán Lãi Vay", 15, 20);
+      
+      // Thêm thông tin tổng hợp
+      const summaryText = document.getElementById("summary-result").innerText;
+      const splitSummary = doc.splitTextToSize(summaryText, 180);
+      doc.setFontSize(12);
+      doc.text(splitSummary, 15, 30);
+
+      // Thêm bảng chi tiết
+      doc.autoTable({
+        html: '#detail-table',
+        startY: 80,
+        theme: 'grid',
+        styles: { fontSize: 10 },
+        headStyles: { fillColor: [0, 123, 255] }
+      });
+
+      doc.save('ket-qua-lai-vay.pdf');
+    }
+  </script>
+</body>
+</html>
